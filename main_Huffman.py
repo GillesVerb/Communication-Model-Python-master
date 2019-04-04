@@ -2,6 +2,7 @@
 
 import os
 from io import StringIO
+from PIL import Image
 
 # if using anaconda3 and error execute: conda install --channel conda-forge pillow=5.2.0
 import numpy as np
@@ -105,20 +106,6 @@ decoded_message = StringIO()
 
 t.tic()
 
-# TODO Iterate over the received messages and compare with the original RS-encoded messages
-# for cnt, (block, original_block) in enumerate(zip(received_message_uint8, rs_encoded_message_uint8)):
-#     try:
-#         decoded, ecc = coder.decode_fast(block, return_string=True)
-#         assert coder.check(decoded + ecc), "Check not correct"
-#         decoded_message.write(str(decoded))
-#     except rs.RSCodecError as error:
-#         diff_symbols = len(block) - (original_block == block).sum()
-#         print(
-#             F"Error occured after {cnt} iterations of {len(received_message_uint8)}")
-#         print(F"{diff_symbols} different symbols in this block")
-#
-# t.toc_print()
-
 print("CHANNEL DECODING COMPLETE")
 print("lengte voor chan enc:",len(uint8_stream))
 print("lengte na chan enc:", len(received_message_uint8))
@@ -131,5 +118,14 @@ klaar_voor_src_dec = util.uint8_to_bit(flat)
 print("lengte src enc na channel:", len(klaar_voor_src_dec))
 huf_decoded_message = huffman.decode(huffman_tree, klaar_voor_src_dec)
 print(F"Dec: {t.toc_str()}")
+print("Inhoud van de gedecodeerde msg:", huf_decoded_message)
 print("Huffman decoded lengte:", len(huf_decoded_message))
 print("De lengte van de pixel seq:", len(image.get_pixel_seq()))
+
+# ======================= Source recreating ========================
+
+# originele_data_array = np.array(huf_decoded_message)
+# print("resultaat in array:",originele_data_array)
+#
+# afbeelding = Image.fromarray(originele_data_array)
+# afbeelding.show()

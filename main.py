@@ -110,7 +110,7 @@ rs_encoded_message_bit = util.uint8_to_bit(rs_encoded_message_uint8)
 print("bitstream voor ber:", rs_encoded_message_bit)
 
 t.tic()
-received_message = channel(rs_encoded_message_bit, ber=0.05)# 0.5 procent van de bits worden aangepast
+received_message = channel(rs_encoded_message_bit, ber=0.05)# 0.05 procent van de bits worden aangepast
 t.toc_print()                                            # de limieten van reed solomon nog opzoeken
 
 # TODO Use this helper function to convert a bit stream to a uint8 stream

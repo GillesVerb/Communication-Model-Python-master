@@ -2,7 +2,7 @@
 
 import os
 from io import StringIO
-
+from PIL import Image
 # if using anaconda3 and error execute: conda install --channel conda-forge pillow=5.2.0
 import numpy as np
 import math
@@ -71,7 +71,7 @@ print("ENCODING COMPLETE")
 rs_encoded_message_bit = util.uint8_to_bit(rs_encoded_message_uint8)
 
 
-received_message = channel(rs_encoded_message_bit, ber=0.2) # 0.2 procent van de bits worden aangepast
+received_message = channel(rs_encoded_message_bit, ber=0.05) # 0.05 procent van de bits worden aangepast
                                                             # de limieten van reed solomon nog opzoeken
 
 # TODO Use this helper function to convert a bit stream to a uint8 stream
@@ -80,22 +80,6 @@ received_message_uint8.resize((math.ceil(len(received_message_uint8)/n), n))
 
 decoded_message = StringIO()
 print("dit is de ontvangen boodschap na RS-decodering: ", received_message_uint8)
-
-
-# TODO Iterate over the received messages and compare with the original RS-encoded messages
-# for cnt, (block, original_block) in enumerate(zip(received_message_uint8, rs_encoded_message_uint8)):
-#     try:
-#         decoded, ecc = coder.decode_fast(block, return_string=True)
-#         assert coder.check(decoded + ecc), "Check not correct"
-#         decoded_message.write(str(decoded))
-#     except rs.RSCodecError as error:
-#         diff_symbols = len(block) - (original_block == block).sum()
-#         print(
-#             F"Error occured after {cnt} iterations of {len(received_message_uint8)}")
-#         print(F"{diff_symbols} different symbols in this block")
-
-
-
 print("DECODING COMPLETE")
 
 
@@ -110,3 +94,7 @@ lzw_decoded_msg = lzw.decode(encoded_list_of_uint8)
 print("lengte resultaat:", len(lzw_decoded_msg))
 print("Resultaat:", lzw_decoded_msg)
 
+# ======================= Source recreating ========================
+
+originele_data_array = np.array(lzw_decoded_msg)
+print("resultaat in array:",originele_data_array)
