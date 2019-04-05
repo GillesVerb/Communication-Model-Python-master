@@ -61,6 +61,7 @@ bitstream_naar_intstream = util.bit_to_uint8(encoded_message)
 
 uint8_stream = bitstream_naar_intstream
 print("dit gaat binnen in channel encoding:", uint8_stream)
+print("Dit is de lengte van die data die binnengaat in het channel", uint8_stream)
 # ====================== CHANNEL ENCODING ========================
 # ======================== Reed-Solomon ==========================
 
@@ -105,17 +106,28 @@ received_message_uint8.resize((math.ceil(len(received_message_uint8)/n), n))
 decoded_message = StringIO()
 
 t.tic()
+for cnt, (block, original_block) in enumerate(zip(received_message_uint8, rs_encoded_message_uint8)):
+    try:
+        decoded, ecc = coder.decode_fast(block, return_string=True)
+        assert coder.check(decoded + ecc), "Check not correct"
+        decoded_message.write(str(decoded))
+    except rs.RSCodecError as error:
+        diff_symbols = len(block) - (original_block == block).sum()
+        print(
+            F"Error occured after {cnt} iterations of {len(received_message_uint8)}")
+        print(F"{diff_symbols} different symbols in this block")
 
 print("CHANNEL DECODING COMPLETE")
 print("lengte voor chan enc:",len(uint8_stream))
 print("lengte na chan enc:", len(received_message_uint8))
 # ======================= SOURCE DECODING ========================
 # =========================== Huffman ============================
-print("channel decoded:", received_message_uint8)
-flat = received_message_uint8.flatten()
-print("flat:", flat)
-klaar_voor_src_dec = util.uint8_to_bit(flat)
-print("lengte src enc na channel:", len(klaar_voor_src_dec))
+ontvangen_ints = np.array(
+    [ord(c) for c in decoded_message.getvalue()], dtype=np.uint8)
+
+print("channel decoded:", ontvangen_ints)
+print("lengte chan decoded data", len(ontvangen_ints))
+klaar_voor_src_dec = util.uint8_to_bit(ontvangen_ints)
 huf_decoded_message = huffman.decode(huffman_tree, klaar_voor_src_dec)
 print(F"Dec: {t.toc_str()}")
 print("Inhoud van de gedecodeerde msg:", huf_decoded_message)

@@ -35,8 +35,10 @@ input_lzw = image.get_pixel_seq().copy()
 # ====================== Lempel-Ziv-Welch ========================
 print("ingang LZW:", input_lzw)
 print("lengte origineel:", len(input_lzw))
-encoded_msg, dictonary = lzw.encode(input_lzw)
-print("source encoded msg: ", encoded_msg)
+encoded_msg, dictonary = lzw.encode(input_lzw)  #encoded_msg geeft UINT32 terug
+print("source encoded msg (uint32): ", encoded_msg)
+encoded_msg_bit = util.uint32_to_bit(encoded_msg)
+encoded_msg_8uint = util.bit_to_uint8(encoded_msg_bit)
 uint8_stream = np.array(encoded_msg, dtype=np.uint8)
 # ====================== CHANNEL ENCODING ========================
 # ======================== Reed-Solomon ==========================
@@ -50,7 +52,7 @@ k = 223  # message_length in symbols
 coder = rs.RSCoder(n, k)
 
 # generate a matrix with k rows (for each message)
-uint8_stream.resize((math.ceil(len(uint8_stream)/k), k),refcheck=False)
+uint8_stream.resize((math.ceil(len(uint8_stream)/k), k), refcheck=False)
 # afterwards you can iterate over each row to encode the message
 messages = uint8_stream
 
@@ -72,26 +74,41 @@ rs_encoded_message_bit = util.uint8_to_bit(rs_encoded_message_uint8)
 
 
 received_message = channel(rs_encoded_message_bit, ber=0.05) # 0.05 procent van de bits worden aangepast
-                                                            # de limieten van reed solomon nog opzoeken
+                                                             # de limieten van reed solomon nog opzoeken
 
 # TODO Use this helper function to convert a bit stream to a uint8 stream
 received_message_uint8 = util.bit_to_uint8(received_message)
 received_message_uint8.resize((math.ceil(len(received_message_uint8)/n), n))
 
 decoded_message = StringIO()
-print("dit is de ontvangen boodschap na RS-decodering: ", received_message_uint8)
+
+for cnt, (block, original_block) in enumerate(zip(received_message_uint8, rs_encoded_message_uint8)):
+    try:
+        decoded, ecc = coder.decode_fast(block, return_string=True)
+        assert coder.check(decoded + ecc), "Check not correct"
+        decoded_message.write(str(decoded))
+    except rs.RSCodecError as error:
+        diff_symbols = len(block) - (original_block == block).sum()
+        print(
+            F"Error occured after {cnt} iterations of {len(received_message_uint8)}")
+        print(F"{diff_symbols} different symbols in this block")
+
 print("DECODING COMPLETE")
 
 
 # ======================= SOURCE DECODING ========================
 # ====================== Lempel-Ziv-Welch ========================
+ontvangen_ints = np.array(
+    [ord(c) for c in decoded_message.getvalue()], dtype=np.uint8)
+print("dit is de data die uit de chan dec komt:", received_message_uint8)
 
-flat = received_message_uint8.flatten()
-encoded_list_of_uint8 = flat.tolist()
-print("flat: ", flat)
+encoded_list_of_uint8 = ontvangen_ints.tolist()
+print("flat: ", ontvangen_ints)
 print("encoded_list_of_uint8:",encoded_list_of_uint8)
 lzw_decoded_msg = lzw.decode(encoded_list_of_uint8)
+print("lengte van initiële data",len(image.get_pixel_seq()))
 print("lengte resultaat:", len(lzw_decoded_msg))
+
 print("Resultaat:", lzw_decoded_msg)
 
 # ======================= Source recreating ========================

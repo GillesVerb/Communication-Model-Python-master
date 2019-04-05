@@ -65,7 +65,7 @@ print("len dec msg huff", len(decoded_message))
 # ====================== Lempel-Ziv-Welch ========================
 input_lzw = image.get_pixel_seq().copy()
 t.tic()
-encoded_msg, dictonary = lzw.encode(input_lzw)
+encoded_msg, dictonary = lzw.encode(input_lzw) #Intersante delen van de dict weergeven
 print("Enc: {}".format(t.toc()))
 print("dit is het geëncodeerde LZW formaat: ", encoded_msg)
 t.tic()
@@ -134,6 +134,6 @@ for cnt, (block, original_block) in enumerate(zip(received_message_uint8, rs_enc
 t.toc_print()
 
 print("DECODING COMPLETE")
-print("dit is de lengte van de data die uit de kanaalcodering komt:", len(received_message))
+print("eerste 10 elementen van de dec msg", decoded_message.getvalue()[:10])
 
 # TODO after everything works, try to simulate the communication model as specified in the assingment

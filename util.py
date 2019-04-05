@@ -6,6 +6,9 @@ def uint8_to_bit(uint8_list):
     return "".join([np.binary_repr(x, width=8) for x in uint8_list])
 
 
+def uint32_to_bit(uint32_list): #eigen routine om uint32 om te vormen naar bits
+    return "".join([np.binary_repr(x, width=32) for x in uint32_list])
+
 def chunks(s, n):
     """Produce `n`-character chunks from `s`."""
     for start in range(0, len(s), n):
