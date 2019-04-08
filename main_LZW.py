@@ -38,6 +38,7 @@ print("ingang LZW:", input_lzw)
 print("lengte origineel:", len(input_lzw))
 encoded_msg, dictonary = lzw.encode(input_lzw)  #encoded_msg geeft UINT32 terug
 print("source encoded msg (uint32): ", encoded_msg)
+#uint32 omzetten naar uint8
 encoded_msg_bit = util.uint32_to_bit(encoded_msg)
 encoded_msg_8uint = util.bit_to_uint8(encoded_msg_bit)
 uint8_stream = np.array(encoded_msg, dtype=np.uint8)
@@ -120,13 +121,29 @@ print("dit is de data die uit de chan dec komt:", decoded_message_uint8)
 
 encoded_list_of_uint8 = decoded_message_uint8.tolist()
 print("encoded_list_of_uint8:",encoded_list_of_uint8)
-lzw_decoded_msg = lzw.decode(encoded_list_of_uint8)
+#uint8 moet uint32 worden:
+encoded_list_of_bits = util.uint8_to_bit(encoded_list_of_uint8)
+aantal_extra_nullen = 32-(len(encoded_list_of_bits)%32)
+print("aantal toe te voegen nullen om deelbaar te worden is:",aantal_extra_nullen)
+status = 0
+while status != 1:
+    if aantal_extra_nullen == 32:
+        encoded_list_of_uint32 = util.bit_to_uint32(encoded_list_of_bits)
+        status = 1
+    else:
+
+        encoded_list_of_bits = encoded_list_of_bits + "0"
+        aantal_extra_nullen = 32 - (len(encoded_list_of_bits) % 32)
+
+encoded_list_of_uint32_klaar = encoded_list_of_uint32.tolist()
+lzw_decoded_msg = lzw.decode(encoded_list_of_uint32_klaar)
 print("lengte van initiële data",len(image.get_pixel_seq()))
 print("lengte resultaat:", len(lzw_decoded_msg))
 
 print("Resultaat:", lzw_decoded_msg)
 
 # ======================= Source recreating ========================
-
-# originele_data_array = np.array(lzw_decoded_msg)
-# print("resultaat in array:",originele_data_array)
+print("-------START SOURCE RECREATING-------")
+# verhouding = np.reshape(lzw_decoded_msg, (image.height, image.width, image.num_of_channels))
+# afbeelding = Image.fromarray(verhouding,image.mode)
+# afbeelding.show()

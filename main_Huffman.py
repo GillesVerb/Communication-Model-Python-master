@@ -96,7 +96,7 @@ print("CHANNEL ENCODING COMPLETE")
 rs_encoded_message_bit = util.uint8_to_bit(rs_encoded_message_uint8)
 
 
-received_message = channel(rs_encoded_message_bit, ber=0.2)#0.5 procent van de bits worden aangepast
+received_message = channel(rs_encoded_message_bit, ber=0.1)#0.5 procent van de bits worden aangepast
                                             # de limieten van reed solomon nog opzoeken
 
 # TODO Use this helper function to convert a bit stream to a uint8 stream

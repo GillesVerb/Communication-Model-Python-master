@@ -35,6 +35,26 @@ def bit_to_uint8(bit_list):
     return np.array([int(bits, 2) for bits in splitted_list], dtype=np.uint8)
 
 
+def bit_to_uint32(bit_list):
+    """Converts a bit string to a numpy uint8 array
+
+    Arguments:
+        bit_list {str} -- Bit list expecting string, otherwise the list is first converted to a but string
+
+    Returns:
+        np.ndarray -- uint32 typed ndarray
+    """
+
+    if type(bit_list) is not str:
+        bit_list = "".join([x for x in bit_list])
+
+    assert len(bit_list) % 32 == 0, "Provided bits length should be divisable by 32"
+
+    splitted_list = [chunk for chunk in chunks(bit_list, 32)]
+
+    return np.array([int(bits, 2) for bits in splitted_list], dtype=np.uint32)
+
+
 class Time:
     def __init__(self):
         self.t = None
