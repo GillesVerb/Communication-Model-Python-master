@@ -34,7 +34,7 @@ print(image)
 
 # ======================= SOURCE ENCODING ========================
 # =========================== Huffman ============================
-
+print("-------START HUFFMAN ENCODING-------")
 # Use t.tic() and t.toc() to measure the executing time as shown below
 
 t = Time()
@@ -64,7 +64,8 @@ print("dit gaat binnen in channel encoding:", uint8_stream)
 print("Dit is de lengte van die data die binnengaat in het channel", uint8_stream)
 # ====================== CHANNEL ENCODING ========================
 # ======================== Reed-Solomon ==========================
-
+print("-------START CHANNEL ENCODING-------")
+initiele_lengte = len(uint8_stream)
 # as we are working with symbols of 8 bits
 # choose n such that m is divisible by 8 when n=2^m−1
 # Example: 255 + 1 = 2^m -> m = 8
@@ -80,7 +81,7 @@ messages = uint8_stream
 
 rs_encoded_message = StringIO()
 
-t.tic()
+
 for message in messages:
     code = coder.encode_fast(message, return_string=True)
     rs_encoded_message.write(code)
@@ -88,15 +89,15 @@ for message in messages:
 # TODO What is the RSCoder outputting? Convert to a uint8 (byte) stream before putting it over the channel
 rs_encoded_message_uint8 = np.array(
     [ord(c) for c in rs_encoded_message.getvalue()], dtype=np.uint8)
-print(t.toc())
+
 print("CHANNEL ENCODING COMPLETE")
 
 # TODO Use this helper function to convert a uint8 stream to a bit stream
 rs_encoded_message_bit = util.uint8_to_bit(rs_encoded_message_uint8)
 
-t.tic()
+
 received_message = channel(rs_encoded_message_bit, ber=0.2)#0.5 procent van de bits worden aangepast
-t.toc_print()                                             # de limieten van reed solomon nog opzoeken
+                                            # de limieten van reed solomon nog opzoeken
 
 # TODO Use this helper function to convert a bit stream to a uint8 stream
 received_message_uint8 = util.bit_to_uint8(received_message)
@@ -104,11 +105,12 @@ received_message_uint8 = util.bit_to_uint8(received_message)
 received_message_uint8.resize((math.ceil(len(received_message_uint8)/n), n))
 
 decoded_message = StringIO()
-
+print("-------START CHANNEL DECODING-------")
 t.tic()
+# TODO Iterate over the received messages and compare with the original RS-encoded messages
 for cnt, (block, original_block) in enumerate(zip(received_message_uint8, rs_encoded_message_uint8)):
     try:
-        decoded, ecc = coder.decode_fast(block, return_string=True)
+        decoded, ecc = coder.decode_fast(block, True, return_string=True)
         assert coder.check(decoded + ecc), "Check not correct"
         decoded_message.write(str(decoded))
     except rs.RSCodecError as error:
@@ -117,27 +119,33 @@ for cnt, (block, original_block) in enumerate(zip(received_message_uint8, rs_enc
             F"Error occured after {cnt} iterations of {len(received_message_uint8)}")
         print(F"{diff_symbols} different symbols in this block")
 
-print("CHANNEL DECODING COMPLETE")
-print("lengte voor chan enc:",len(uint8_stream))
-print("lengte na chan enc:", len(received_message_uint8))
-# ======================= SOURCE DECODING ========================
-# =========================== Huffman ============================
-ontvangen_ints = np.array(
+
+decoded_message_uint8 = np.array(
     [ord(c) for c in decoded_message.getvalue()], dtype=np.uint8)
 
-print("channel decoded:", ontvangen_ints)
-print("lengte chan decoded data", len(ontvangen_ints))
-klaar_voor_src_dec = util.uint8_to_bit(ontvangen_ints)
+# Overbodige data wissen
+te_vertwijderen_nullen = len(decoded_message_uint8) - initiele_lengte
+print("Er moeten ", te_vertwijderen_nullen,"nullen verwijderd worden")
+
+decoded_message_uint8 = decoded_message_uint8[:-te_vertwijderen_nullen or None]
+print("decoded_message_uint8: ", decoded_message_uint8)
+print("Lengte hiervan is:", len(decoded_message_uint8))
+print("Het verschil voor en na kanaaldecodering en verwijderde nullen is: ", len(decoded_message_uint8) - initiele_lengte)
+
+
+# ======================= SOURCE DECODING ========================
+# =========================== Huffman ============================
+print("-------START HUFFMAN DECODING-------")
+
+print("lengte chan decoded data", len(decoded_message_uint8))
+klaar_voor_src_dec = util.uint8_to_bit(decoded_message_uint8)
 huf_decoded_message = huffman.decode(huffman_tree, klaar_voor_src_dec)
 print(F"Dec: {t.toc_str()}")
-print("Inhoud van de gedecodeerde msg:", huf_decoded_message)
 print("Huffman decoded lengte:", len(huf_decoded_message))
-print("De lengte van de pixel seq:", len(image.get_pixel_seq()))
+print("De lengte van de originele pixel seq:", len(image.get_pixel_seq()))
 
 # ======================= Source recreating ========================
-
-# originele_data_array = np.array(huf_decoded_message)
-# print("resultaat in array:",originele_data_array)
-#
-# afbeelding = Image.fromarray(originele_data_array)
-# afbeelding.show()
+print("-------START SOURCE RECREATING-------")
+verhouding = np.reshape(huf_decoded_message, (image.height, image.width, image.num_of_channels))
+afbeelding = Image.fromarray(verhouding,image.mode)
+afbeelding.show()

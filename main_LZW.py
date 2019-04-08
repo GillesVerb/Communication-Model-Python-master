@@ -33,6 +33,7 @@ print(image)
 input_lzw = image.get_pixel_seq().copy()
 # ======================= SOURCE ENCODING ========================
 # ====================== Lempel-Ziv-Welch ========================
+print("-------START LZW ENCODING-------")
 print("ingang LZW:", input_lzw)
 print("lengte origineel:", len(input_lzw))
 encoded_msg, dictonary = lzw.encode(input_lzw)  #encoded_msg geeft UINT32 terug
@@ -42,6 +43,8 @@ encoded_msg_8uint = util.bit_to_uint8(encoded_msg_bit)
 uint8_stream = np.array(encoded_msg, dtype=np.uint8)
 # ====================== CHANNEL ENCODING ========================
 # ======================== Reed-Solomon ==========================
+print("-------START CHANNEL ENCODING-------")
+initiele_lengte = len(uint8_stream)
 print("ingang channel encoder:", uint8_stream)
 # as we are working with symbols of 8 bits
 # choose n such that m is divisable by 8 when n=2^m−1
@@ -81,10 +84,10 @@ received_message_uint8 = util.bit_to_uint8(received_message)
 received_message_uint8.resize((math.ceil(len(received_message_uint8)/n), n))
 
 decoded_message = StringIO()
-
+print("-------START CHANNEL DECODING-------")
 for cnt, (block, original_block) in enumerate(zip(received_message_uint8, rs_encoded_message_uint8)):
     try:
-        decoded, ecc = coder.decode_fast(block, return_string=True)
+        decoded, ecc = coder.decode_fast(block, True, return_string=True)
         assert coder.check(decoded + ecc), "Check not correct"
         decoded_message.write(str(decoded))
     except rs.RSCodecError as error:
@@ -93,17 +96,29 @@ for cnt, (block, original_block) in enumerate(zip(received_message_uint8, rs_enc
             F"Error occured after {cnt} iterations of {len(received_message_uint8)}")
         print(F"{diff_symbols} different symbols in this block")
 
+
+decoded_message_uint8 = np.array(
+    [ord(c) for c in decoded_message.getvalue()], dtype=np.uint8)
+
+# Overbodige data wissen
+te_vertwijderen_nullen = len(decoded_message_uint8) - initiele_lengte
+print("Er moeten ", te_vertwijderen_nullen,"nullen verwijderd worden")
+
+decoded_message_uint8 = decoded_message_uint8[:-te_vertwijderen_nullen or None]
+print("decoded_message_uint8: ", decoded_message_uint8)
+print("Lengte hiervan is:", len(decoded_message_uint8))
+print("Het verschil voor en na kanaaldecodering is: ", len(decoded_message_uint8) - initiele_lengte)
+
+
 print("DECODING COMPLETE")
 
 
 # ======================= SOURCE DECODING ========================
 # ====================== Lempel-Ziv-Welch ========================
-ontvangen_ints = np.array(
-    [ord(c) for c in decoded_message.getvalue()], dtype=np.uint8)
-print("dit is de data die uit de chan dec komt:", received_message_uint8)
+print("-------START CHANNEL DECODING-------")
+print("dit is de data die uit de chan dec komt:", decoded_message_uint8)
 
-encoded_list_of_uint8 = ontvangen_ints.tolist()
-print("flat: ", ontvangen_ints)
+encoded_list_of_uint8 = decoded_message_uint8.tolist()
 print("encoded_list_of_uint8:",encoded_list_of_uint8)
 lzw_decoded_msg = lzw.decode(encoded_list_of_uint8)
 print("lengte van initiële data",len(image.get_pixel_seq()))
@@ -113,5 +128,5 @@ print("Resultaat:", lzw_decoded_msg)
 
 # ======================= Source recreating ========================
 
-originele_data_array = np.array(lzw_decoded_msg)
-print("resultaat in array:",originele_data_array)
+# originele_data_array = np.array(lzw_decoded_msg)
+# print("resultaat in array:",originele_data_array)

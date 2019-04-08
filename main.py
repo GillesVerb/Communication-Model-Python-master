@@ -21,9 +21,9 @@ IMG_NAME = 'stack2.jpg'
 dir_path = os.path.dirname(os.path.realpath(__file__))
 IMG_PATH = os.path.join(dir_path, IMG_NAME)  # use absolute path
 
-print(F"Loading {IMG_NAME} at {IMG_PATH}")
+#print(F"Loading {IMG_NAME} at {IMG_PATH}")
 image = ImageSource().load_from_file(IMG_PATH)
-print(image)
+#print(image)
 # uncomment if you want to display the loaded image
 # image.show()
 # uncomment if you want to show the histogram of the colors
@@ -35,8 +35,10 @@ print(image)
 # =========================== Huffman ============================
 
 # Use t.tic() and t.toc() to measure the executing time as shown below
-
+print("lengte initiele data:", len(image.get_pixel_seq()))
 t = Time()
+t2 = Time()
+t2.tic()
 t.tic()
 # Determine the number of occurrences of the source or use a fixed huffman_freq
 uniekeWaardes, aantalOccurs = np.unique(image.get_pixel_seq(), return_counts=True)
@@ -49,35 +51,39 @@ t.tic()
 #  print-out the codebook and validate the codebook (include your findings in the report)
 encoded_message = huffman.encode(huffman_tree.codebook, image.get_pixel_seq())
 print(F"dit is de codebook (hoop ik): {huffman_tree.codebook}")
-print(len(encoded_message))
+#print(len(encoded_message))
 print(F"Enc: {t.toc_str()}")
-print(huffman_tree.print())
+#print(huffman_tree.print())
 
 
-print("Dit is de Huffman geëncodeerde data:", encoded_message)
+#print("Dit is de Huffman geëncodeerde data:", encoded_message)
 t.tic()
 decoded_message = huffman.decode(huffman_tree, encoded_message)
 print(F"Dec: {t.toc_str()}")
-print("len image:", len(image.get_pixel_seq()))
-print("len dec msg huff", len(decoded_message))
 
+print("len dec msg huff", len(decoded_message))
+print(F"Tijd van volledig Huffman proces: {t2.toc_str()}")
 # ======================= SOURCE ENCODING ========================
 # ====================== Lempel-Ziv-Welch ========================
+t2.tic()
 input_lzw = image.get_pixel_seq().copy()
+print("lengte input data:", len(image.get_pixel_seq()))
 t.tic()
 encoded_msg, dictonary = lzw.encode(input_lzw) #Intersante delen van de dict weergeven
-print("Enc: {}".format(t.toc()))
-print("dit is het geëncodeerde LZW formaat: ", encoded_msg)
+print(F"Enc: {t.toc_str()}")
+#print("dit is het geëncodeerde LZW formaat: ", encoded_msg)
 t.tic()
 decoded_msg = lzw.decode(encoded_msg)
-print("Enc: {0:.4f}".format(t.toc()))
-print("formaat decoded LZW:",decoded_msg)
-print("len dec msg LZW", len(decoded_message))
+print(F"Dec: {t.toc_str()}")
+#print("formaat decoded LZW:",decoded_msg)
+print("len dec msg LZW", len(decoded_msg))
 uint8_stream = np.array(decoded_msg, dtype=np.uint8)
+print(F"Tijd van volledig LZW proces: {t2.toc_str()}")
 # ====================== CHANNEL ENCODING ========================
 # ======================== Reed-Solomon ==========================
-print("dit formaat komt binnen in het channel:", uint8_stream)
-print("en dit is de lengte van deze data", len(uint8_stream))
+# print("dit formaat komt binnen in het channel:", uint8_stream)
+initiele_lengte = len(uint8_stream)
+print("Dit is de lengte van de data aan ingang", initiele_lengte)
 # as we are working with symbols of 8 bits
 # choose n such that m is divisible by 8 when n=2^m−1
 # Example: 255 + 1 = 2^m -> m = 8
@@ -85,7 +91,7 @@ n = 255  # code_word_length in symbols
 k = 223  # message_length in symbols
 
 coder = rs.RSCoder(n, k)
-
+t2.tic()
 # generate a matrix with k rows (for each message)
 uint8_stream.resize((math.ceil(len(uint8_stream)/k), k), refcheck=False)
 # afterwards you can iterate over each row to encode the message
@@ -101,28 +107,27 @@ for message in messages:
 # TODO What is the RSCoder outputting? Convert to a uint8 (byte) stream before putting it over the channel
 rs_encoded_message_uint8 = np.array(
     [ord(c) for c in rs_encoded_message.getvalue()], dtype=np.uint8)
-print(t.toc())
-print("ENCODING COMPLETE")
+print(F"ENCODING COMPLETE IN: {t.toc_str()}")
 
 # TODO Use this helper function to convert a uint8 stream to a bit stream7
-print("dit bericht wordt omgezet van uint8 naar bitstream: ", rs_encoded_message_uint8)
+#print("dit bericht wordt omgezet van uint8 naar bitstream: ", rs_encoded_message_uint8)
 rs_encoded_message_bit = util.uint8_to_bit(rs_encoded_message_uint8)
-print("bitstream voor ber:", rs_encoded_message_bit)
+#print("bitstream voor ber:", rs_encoded_message_bit)
 
 t.tic()
-received_message = channel(rs_encoded_message_bit, ber=0.05)# 0.05 procent van de bits worden aangepast
-t.toc_print()                                            # de limieten van reed solomon nog opzoeken
+received_message = channel(rs_encoded_message_bit, ber=0.1)# 0.1 procent van de bits worden aangepast
+print(F"Kanaal simulatie in:{t.toc_print()}")              # de limieten van reed solomon nog opzoeken
 
 # TODO Use this helper function to convert a bit stream to a uint8 stream
 received_message_uint8 = util.bit_to_uint8(received_message)
 received_message_uint8.resize((math.ceil(len(received_message_uint8)/n),n))
 decoded_message = StringIO()
-t.tic()
 
+t.tic()
 # TODO Iterate over the received messages and compare with the original RS-encoded messages
 for cnt, (block, original_block) in enumerate(zip(received_message_uint8, rs_encoded_message_uint8)):
     try:
-        decoded, ecc = coder.decode_fast(block, return_string=True)
+        decoded, ecc = coder.decode_fast(block, True, return_string=True)
         assert coder.check(decoded + ecc), "Check not correct"
         decoded_message.write(str(decoded))
     except rs.RSCodecError as error:
@@ -131,9 +136,23 @@ for cnt, (block, original_block) in enumerate(zip(received_message_uint8, rs_enc
             F"Error occured after {cnt} iterations of {len(received_message_uint8)}")
         print(F"{diff_symbols} different symbols in this block")
 
-t.toc_print()
 
-print("DECODING COMPLETE")
-print("eerste 10 elementen van de dec msg", decoded_message.getvalue()[:10])
+decoded_message_uint8 = np.array(
+    [ord(c) for c in decoded_message.getvalue()], dtype=np.uint8)
+
+# Overbodige data wissen
+te_vertwijderen_nullen = len(decoded_message_uint8) - initiele_lengte
+print("Er moeten ", te_vertwijderen_nullen,"nullen verwijderd worden")
+
+decoded_message_uint8 = decoded_message_uint8[:-te_vertwijderen_nullen or None]
+print("decoded_message_uint8: ", decoded_message_uint8)
+print("Lengte hiervan is:", len(decoded_message_uint8))
+print("Het verschil voor en na kanaaldecodering is: ", len(decoded_message_uint8) - initiele_lengte)
+
+print(F"DECODING COMPLETE IN: {t.toc_print()}")
+print(F"Volledige RS uitgevoerd in: {t2.toc_str()}")
+
+
+
 
 # TODO after everything works, try to simulate the communication model as specified in the assingment
