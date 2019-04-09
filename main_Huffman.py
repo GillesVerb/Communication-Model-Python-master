@@ -36,7 +36,7 @@ print(image)
 # =========================== Huffman ============================
 print("-------START HUFFMAN ENCODING-------")
 # Use t.tic() and t.toc() to measure the executing time as shown below
-
+print("lengte initiele data:", (8 * len(image.get_pixel_seq())), " bits")
 t = Time()
 t.tic()
 # Determine the number of occurrences of the source or use a fixed huffman_freq
@@ -55,13 +55,12 @@ print(F"Enc: {t.toc_str()}")
 # print(huffman_tree.print())
 
 t.tic()
-print("encoded msg is stream van enen en nullen")
+#print("encoded msg is stream van enen en nullen")
 
 bitstream_naar_intstream = util.bit_to_uint8(encoded_message)
 
 uint8_stream = bitstream_naar_intstream
-print("dit gaat binnen in channel encoding:", uint8_stream)
-print("Dit is de lengte van die data die binnengaat in het channel", uint8_stream)
+#print("dit gaat binnen in channel encoding:", uint8_stream)
 # ====================== CHANNEL ENCODING ========================
 # ======================== Reed-Solomon ==========================
 print("-------START CHANNEL ENCODING-------")
@@ -94,17 +93,18 @@ print("CHANNEL ENCODING COMPLETE")
 
 # TODO Use this helper function to convert a uint8 stream to a bit stream
 rs_encoded_message_bit = util.uint8_to_bit(rs_encoded_message_uint8)
+print("-------START CHANNEL-------")
 
-
-received_message = channel(rs_encoded_message_bit, ber=0.1)#0.5 procent van de bits worden aangepast
-                                            # de limieten van reed solomon nog opzoeken
-
+received_message = channel(rs_encoded_message_bit, ber=0.1)#0.1 procent van de bits worden aangepast
+                                                           # de limieten van reed solomon nog opzoeken
+print("De lengte van de data die op het kanaal komt:", len(received_message), "bits")
 # TODO Use this helper function to convert a bit stream to a uint8 stream
 received_message_uint8 = util.bit_to_uint8(received_message)
 
 received_message_uint8.resize((math.ceil(len(received_message_uint8)/n), n))
 
 decoded_message = StringIO()
+print("Het aantal toegevoegde bits is:",(len(received_message)-(8*initiele_lengte)))
 print("-------START CHANNEL DECODING-------")
 t.tic()
 # TODO Iterate over the received messages and compare with the original RS-encoded messages
@@ -125,27 +125,27 @@ decoded_message_uint8 = np.array(
 
 # Overbodige data wissen
 te_vertwijderen_nullen = len(decoded_message_uint8) - initiele_lengte
-print("Er moeten ", te_vertwijderen_nullen,"nullen verwijderd worden")
+print("Er moeten ", te_vertwijderen_nullen,"bits verwijderd worden")
 
 decoded_message_uint8 = decoded_message_uint8[:-te_vertwijderen_nullen or None]
-print("decoded_message_uint8: ", decoded_message_uint8)
-print("Lengte hiervan is:", len(decoded_message_uint8))
-print("Het verschil voor en na kanaaldecodering en verwijderde nullen is: ", len(decoded_message_uint8) - initiele_lengte)
+#print("decoded_message_uint8: ", decoded_message_uint8)
+#print("Lengte hiervan is:", (8*len(decoded_message_uint8)),"bits")
+print("Het verschil voor en na kanaaldecodering en verwijderde bits is: ", len(decoded_message_uint8) - initiele_lengte)
 
 
 # ======================= SOURCE DECODING ========================
 # =========================== Huffman ============================
 print("-------START HUFFMAN DECODING-------")
 
-print("lengte chan decoded data", len(decoded_message_uint8))
+print("lengte chan decoded data", (8*len(decoded_message_uint8)),"bits")
 klaar_voor_src_dec = util.uint8_to_bit(decoded_message_uint8)
 huf_decoded_message = huffman.decode(huffman_tree, klaar_voor_src_dec)
 print(F"Dec: {t.toc_str()}")
-print("Huffman decoded lengte:", len(huf_decoded_message))
-print("De lengte van de originele pixel seq:", len(image.get_pixel_seq()))
+print("Huffman decoded lengte:", (8*len(huf_decoded_message)), "bits, = lengte originele data")
 
 # ======================= Source recreating ========================
 print("-------START SOURCE RECREATING-------")
 verhouding = np.reshape(huf_decoded_message, (image.height, image.width, image.num_of_channels))
+
 afbeelding = Image.fromarray(verhouding,image.mode)
 afbeelding.show()

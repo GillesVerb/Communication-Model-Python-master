@@ -30,14 +30,14 @@ image = ImageSource().load_from_file(IMG_PATH)
 # image.show_color_hist()
 
 # ================================================================
-
-# ======================= SOURCE ENCODING ========================
-# =========================== Huffman ============================
-
-# Use t.tic() and t.toc() to measure the executing time as shown below
-print("lengte initiele data:", len(image.get_pixel_seq()))
 t = Time()
 t2 = Time()
+# ======================= SOURCE ENCODING ========================
+# =========================== Huffman ============================
+print("-------START HUFFMAN ENCODING-------")
+# Use t.tic() and t.toc() to measure the executing time as shown below
+print("lengte initiele data:", (8 * len(image.get_pixel_seq())), " bits")
+
 t2.tic()
 t.tic()
 # Determine the number of occurrences of the source or use a fixed huffman_freq
@@ -50,40 +50,43 @@ print(F"Generating the Huffman Tree took {t.toc_str()}")
 t.tic()
 #  print-out the codebook and validate the codebook (include your findings in the report)
 encoded_message = huffman.encode(huffman_tree.codebook, image.get_pixel_seq())
-print(F"dit is de codebook (hoop ik): {huffman_tree.codebook}")
-#print(len(encoded_message))
+#print(F"dit is de codebook (hoop ik): {huffman_tree.codebook}")
+print("Dit is de lengte van de encoded message: ", len(encoded_message), " bits")
 print(F"Enc: {t.toc_str()}")
 #print(huffman_tree.print())
 
-
+print("-------START HUFFMAN DECODING-------")
 #print("Dit is de Huffman geëncodeerde data:", encoded_message)
 t.tic()
 decoded_message = huffman.decode(huffman_tree, encoded_message)
 print(F"Dec: {t.toc_str()}")
 
-print("len dec msg huff", len(decoded_message))
+print("len dec msg huff: ", (8*len(decoded_message))," bits")
 print(F"Tijd van volledig Huffman proces: {t2.toc_str()}")
 # ======================= SOURCE ENCODING ========================
 # ====================== Lempel-Ziv-Welch ========================
+print("-------START LZW ENCODING-------")
 t2.tic()
 input_lzw = image.get_pixel_seq().copy()
-print("lengte input data:", len(image.get_pixel_seq()))
+print("lengte initiele data:", (8 * len(image.get_pixel_seq())), " bits")
 t.tic()
 encoded_msg, dictonary = lzw.encode(input_lzw) #Intersante delen van de dict weergeven
 print(F"Enc: {t.toc_str()}")
-#print("dit is het geëncodeerde LZW formaat: ", encoded_msg)
+print("Dit is de lengte van de encoded data",(32*len(encoded_msg))," bits")
 t.tic()
+print("-------START LZW DECODING-------")
 decoded_msg = lzw.decode(encoded_msg)
 print(F"Dec: {t.toc_str()}")
 #print("formaat decoded LZW:",decoded_msg)
-print("len dec msg LZW", len(decoded_msg))
+print("len dec msg LZW: ", (8*len(decoded_msg))," bits")
 uint8_stream = np.array(decoded_msg, dtype=np.uint8)
 print(F"Tijd van volledig LZW proces: {t2.toc_str()}")
 # ====================== CHANNEL ENCODING ========================
 # ======================== Reed-Solomon ==========================
+print("-------START CHANNEL ENCODING-------")
 # print("dit formaat komt binnen in het channel:", uint8_stream)
 initiele_lengte = len(uint8_stream)
-print("Dit is de lengte van de data aan ingang", initiele_lengte)
+print("Dit is de lengte van de data aan ingang", (8*initiele_lengte),"bits")
 # as we are working with symbols of 8 bits
 # choose n such that m is divisible by 8 when n=2^m−1
 # Example: 255 + 1 = 2^m -> m = 8
@@ -115,14 +118,16 @@ rs_encoded_message_bit = util.uint8_to_bit(rs_encoded_message_uint8)
 #print("bitstream voor ber:", rs_encoded_message_bit)
 
 t.tic()
-received_message = channel(rs_encoded_message_bit, ber=0.1)# 0.1 procent van de bits worden aangepast
-print(F"Kanaal simulatie in:{t.toc_print()}")              # de limieten van reed solomon nog opzoeken
+received_message = channel(rs_encoded_message_bit, ber=0.3)# 0.1 procent van de bits worden aangepast
+print(F"Kanaal simulatie in:{t.toc_print()}")              # !!de limieten van reed solomon nog opzoeken!!
 
 # TODO Use this helper function to convert a bit stream to a uint8 stream
+print("De lengte van de data die op het kanaal komt:", len(received_message), "bits")
 received_message_uint8 = util.bit_to_uint8(received_message)
 received_message_uint8.resize((math.ceil(len(received_message_uint8)/n),n))
 decoded_message = StringIO()
-
+print("Het aantal toegevoegde bits is:",(len(received_message)-(8*initiele_lengte)))
+print("-------START CHANNEL DECODING-------")
 t.tic()
 # TODO Iterate over the received messages and compare with the original RS-encoded messages
 for cnt, (block, original_block) in enumerate(zip(received_message_uint8, rs_encoded_message_uint8)):
@@ -145,11 +150,9 @@ te_vertwijderen_nullen = len(decoded_message_uint8) - initiele_lengte
 print("Er moeten ", te_vertwijderen_nullen,"nullen verwijderd worden")
 
 decoded_message_uint8 = decoded_message_uint8[:-te_vertwijderen_nullen or None]
-print("decoded_message_uint8: ", decoded_message_uint8)
-print("Lengte hiervan is:", len(decoded_message_uint8))
-print("Het verschil voor en na kanaaldecodering is: ", len(decoded_message_uint8) - initiele_lengte)
-
 print(F"DECODING COMPLETE IN: {t.toc_print()}")
+print("Lengte hiervan is:", (8*len(decoded_message_uint8)), "bits")
+print("Het verschil voor en na kanaaldecodering is: ", len(decoded_message_uint8) - initiele_lengte)
 print(F"Volledige RS uitgevoerd in: {t2.toc_str()}")
 
 

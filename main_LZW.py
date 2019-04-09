@@ -116,7 +116,7 @@ print("DECODING COMPLETE")
 
 # ======================= SOURCE DECODING ========================
 # ====================== Lempel-Ziv-Welch ========================
-print("-------START CHANNEL DECODING-------")
+print("-------START SOURCE DECODING-------")
 print("dit is de data die uit de chan dec komt:", decoded_message_uint8)
 
 encoded_list_of_uint8 = decoded_message_uint8.tolist()
